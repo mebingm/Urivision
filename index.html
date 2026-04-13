@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description"
+        content="AI-Powered Urine Strip Analyzer with Camera Capture, Gallery Import, and Magic Scan auto-detection. Installable Android app.">
+    <meta name="theme-color" content="#0a0e1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Urine Vision Explorer | AI Strip Analyzer</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Splash Screen -->
+    <div id="splashScreen" class="splash-screen">
+        <div class="splash-content">
+            <div class="splash-icon">
+                <svg width="50" height="50" viewBox="0 0 50 50" fill="none">
+                    <rect x="18" y="5" width="14" height="40" rx="3" fill="white" opacity="0.9" />
+                    <circle cx="25" cy="14" r="3.5" fill="#fbbf24" />
+                    <circle cx="25" cy="22" r="3.5" fill="#4ade80" />
+                    <circle cx="25" cy="30" r="3.5" fill="#f87171" />
+                    <circle cx="25" cy="38" r="3.5" fill="#38bdf8" />
+                </svg>
+            </div>
+            <h1 class="splash-title">Urine Vision Explorer</h1>
+            <p class="splash-subtitle">AI-Powered Strip Analysis</p>
+            <div class="splash-loader">
+                <div class="splash-loader-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="app-container hidden">
+
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <span class="brand-icon">◉</span>
+                <span class="brand-name">UriVision</span>
+            </div>
+            <div class="top-bar-right">
+                <div id="connectionStatus" class="connection-dot" title="Online"
+                    style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></div>
+                <button id="settingsNavBtn" class="icon-btn" aria-label="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Install Banner -->
+        <div id="installBanner" class="install-banner hidden">
+            <span class="install-banner-text">📲 <strong>Install</strong> this app on your phone</span>
+            <button id="installBtn" class="install-btn">Install</button>
+            <button id="dismissInstall" class="install-dismiss">✕</button>
+        </div>
+
+        <!-- ==================== SCREEN: CAPTURE ==================== -->
+        <section id="screenCapture" class="screen active">
+            <div class="capture-hero">
+                <h1 class="hero-title">Urine Vision Explorer</h1>
+                <p class="hero-sub">Capture a strip photo or pick from gallery</p>
+            </div>
+
+            <!-- Strip Type -->
+            <div class="strip-selector">
+                <label>Strip Type</label>
+                <select id="stripTypeSelect" class="strip-select">
+                    <option value="12">Agappe 12-Pad</option>
+                    <option value="11">Standard 11-Pad</option>
+                    <option value="10">Standard 10-Pad</option>
+                </select>
+            </div>
+
+            <!-- Action Cards -->
+            <div class="capture-actions">
+                <div class="action-card camera" id="openCameraBtn">
+                    <div class="action-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                            <circle cx="12" cy="13" r="4" />
+                        </svg>
+                    </div>
+                    <div class="action-label">Camera</div>
+                    <div class="action-desc">Take a live photo</div>
+                </div>
+                <div class="action-card gallery" id="openGalleryBtn">
+                    <div class="action-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                    </div>
+                    <div class="action-label">Gallery</div>
+                    <div class="action-desc">Pick from device</div>
+                </div>
+            </div>
+
+            <input type="file" id="galleryInput" accept="image/*" class="hidden">
+            <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
+        </section>
+
+        <!-- ==================== SCREEN: ANALYSIS ==================== -->
+        <section id="screenAnalysis" class="screen">
+            <div class="analysis-panel">
+                <!-- Image Preview -->
+                <div class="image-preview-section">
+                    <canvas id="mainCanvas"></canvas>
+                    <div class="preview-toolbar">
+                        <div class="toolbar-info">
+                            <span id="statusBadge" class="status-badge ready">Ready</span>
+                            <span id="coordDisplay"
+                                style="font-size:0.65rem;color:var(--text-muted);font-family:monospace;">--</span>
+                        </div>
+                        <div class="toolbar-actions">
+                            <button id="resetAnalysisBtn" class="btn-icon" title="Reset">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M23 4v6h-6M1 20v-6h6" />
+                                    <path
+                                        d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Magic Scan Button -->
+                <button id="magicScanBtn" class="btn-magic">
+                    ✨ Magic Scan — Auto Detect Pads
+                </button>
+
+                <!-- Manual Mode Hint -->
+                <div id="hintOverlay" class="hint-banner">
+                    <span class="hint-icon">👆</span>
+                    <span class="hint-text">
+                        <strong>Manual mode:</strong> Tap the <strong>top pad</strong> then the <strong>bottom
+                            pad</strong> on the strip image to define the reading area.
+                    </span>
+                </div>
+
+                <!-- Proceed / Reset Buttons (shown after 2 points placed) -->
+                <div id="manualActions" class="hidden" style="display:none; gap:10px; margin-top:12px;">
+                    <button id="resetPointsBtn" class="btn btn-outline" style="flex:1;">🔄 Reset Points</button>
+                    <button id="proceedBtn" class="btn btn-primary" style="flex:2;">✅ Proceed — Analyze Pads</button>
+                </div>
+
+                <!-- Results -->
+                <div id="resultsSection" class="results-section hidden">
+                    <h3 class="results-section-title">Analysis Results</h3>
+                    <div id="resultsGrid" class="results-grid">
+                        <!-- populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Calibration Sliders -->
+                <div class="calibration-panel">
+                    <div class="cal-panel-title">Vision Calibration</div>
+                    <div class="cal-slider-group">
+                        <div class="cal-slider-header">
+                            <span class="cal-slider-label">ROI Width</span>
+                            <span id="roiWidthVal" class="cal-slider-value">40px</span>
+                        </div>
+                        <input type="range" id="roiWidthInput" class="cal-slider" min="10" max="100" value="40">
+                    </div>
+                    <div class="cal-slider-group">
+                        <div class="cal-slider-header">
+                            <span class="cal-slider-label">Sensitivity Threshold</span>
+                            <span id="sensVal" class="cal-slider-value">15 ΔE</span>
+                        </div>
+                        <input type="range" id="sensInput" class="cal-slider" min="5" max="50" value="15">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SCREEN: HISTORY ==================== -->
+        <section id="screenHistory" class="screen">
+            <div class="section-header">
+                <h2>Analysis History</h2>
+                <p>View past strip analysis results</p>
+            </div>
+            <div id="historyList" class="history-list">
+                <div class="empty-state">
+                    <span class="empty-icon">📋</span>
+                    <p>No analysis history yet</p>
+                    <p class="empty-sub">Results will appear here after your first scan</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SCREEN: SETTINGS ==================== -->
+        <section id="screenSettings" class="screen">
+            <div class="section-header">
+                <h2>Settings</h2>
+            </div>
+            <div class="settings-list">
+                <div class="settings-group">
+                    <h3 class="settings-group-title">Analysis</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <span class="setting-label">Auto Magic Scan</span>
+                            <span class="setting-desc">Run Magic Scan automatically after image load</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="settingAutoScan">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <span class="setting-label">Save to History</span>
+                            <span class="setting-desc">Auto-save analysis results</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="settingSaveHistory" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="settings-group">
+                    <h3 class="settings-group-title">Data</h3>
+                    <div class="setting-item">
+                        <button id="clearHistoryBtn" class="btn btn-danger btn-sm">Clear All History</button>
+                    </div>
+                </div>
+                <div class="settings-group">
+                    <h3 class="settings-group-title">About</h3>
+                    <div class="about-info">
+                        <p><strong>Urine Vision Explorer</strong> v1.0.0</p>
+                        <p>AI-Powered Urine Strip Analyzer</p>
+                        <p class="about-sub">Camera + Gallery • Magic Scan • Installable PWA</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-screen="capture">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path
+                        d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                </svg>
+                <span>Capture</span>
+            </button>
+            <button class="nav-item" data-screen="analysis">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 20V10" />
+                    <path d="M12 20V4" />
+                    <path d="M6 20v-6" />
+                </svg>
+                <span>Analysis</span>
+            </button>
+            <button class="nav-item" data-screen="history">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span>History</span>
+            </button>
+            <button class="nav-item" data-screen="settings">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                        d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                </svg>
+                <span>Settings</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- ==================== CAMERA FULLSCREEN ==================== -->
+    <div id="cameraFullscreen" class="camera-fullscreen hidden">
+        <div class="camera-top-bar">
+            <button id="cameraCloseBtn" class="camera-close-btn">✕</button>
+            <span style="color:white;font-size:0.8rem;font-weight:700;">📷 Camera Capture</span>
+            <div style="width:36px;"></div>
+        </div>
+        <div class="camera-view">
+            <video id="cameraPreview" autoplay playsinline muted></video>
+            <div class="camera-guide">
+                <div class="guide-frame">
+                    <div class="guide-corner tl"></div>
+                    <div class="guide-corner tr"></div>
+                    <div class="guide-corner bl"></div>
+                    <div class="guide-corner br"></div>
+                    <span class="guide-label-top">TOP</span>
+                    <span class="guide-label-bottom">BOTTOM</span>
+                </div>
+                <span class="guide-text">Align strip vertically in frame</span>
+            </div>
+        </div>
+        <div class="camera-controls-bar">
+            <button id="camGalleryBtn" class="cam-btn" title="Gallery">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                </svg>
+            </button>
+            <button id="shutterBtn" class="capture-shutter" aria-label="Capture"></button>
+            <button id="switchCamBtn" class="cam-btn" title="Switch Camera">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6M1 20v-6h6" />
+                    <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast hidden">
+        <span id="toastIcon" class="toast-icon">✓</span>
+        <span id="toastMessage" class="toast-message"></span>
+    </div>
+
+    <script>
+        // =====================================================================
+        // EXACT COPY OF Urine_Vision_Explorer.html ANALYSIS ENGINE
+        // Only additions: Camera capture, Gallery, PWA, Navigation, History
+        // =====================================================================
+
+        // ---- 🧬 SYSTEM CONFIG (EXACT COPY FROM Urine_Vision_Explorer.html) ----
+        const PARAMETERS = [
+            { id: 'LEU', name: 'Leukocytes', color_ref: [[255,255,255,'Negative'], [235,210,235,'Trace'], [200,160,200,'1+'], [160,110,160,'2+']] },
+            { id: 'NIT', name: 'Nitrite', color_ref: [[255,255,255,'Negative'], [255,230,230,'Positive']] },
+            { id: 'URO', name: 'Urobilinogen', color_ref: [[255,250,230,'Normal'], [255,230,200,'2'], [255,200,180,'4'], [255,160,160,'8']] },
+            { id: 'PRO', name: 'Protein', color_ref: [[255,255,200,'Negative'], [230,250,180,'Trace'], [190,230,160,'1+'], [140,210,140,'2+']] },
+            { id: 'PH',  name: 'pH', color_ref: [[255,180,100,'5.0'], [255,210,120,'6.0'], [220,220,120,'7.0'], [150,200,120,'8.0']] },
+            { id: 'BLD', name: 'Blood', color_ref: [[255,210,120,'Negative'], [255,230,150,'Trace'], [200,230,130,'1+'], [140,200,100,'2+']] },
+            { id: 'SG',  name: 'Specific Gravity', color_ref: [[50,100,150,'1.000'], [100,140,140,'1.010'], [150,160,100,'1.020'], [180,160,50,'1.030']] },
+            { id: 'KET', name: 'Ketone', color_ref: [[255,255,240,'Negative'], [245,230,245,'Trace'], [225,200,225,'1+'], [200,160,200,'2+']] },
+            { id: 'BIL', name: 'Bilirubin', color_ref: [[255,255,240,'Negative'], [255,240,200,'1+'], [255,220,160,'2+'], [255,200,120,'3+']] },
+            { id: 'GLU', name: 'Glucose', color_ref: [[100,200,200,'Negative'], [140,220,160,'Trace'], [180,220,120,'1+'], [210,210,80,'2+'], [180,180,40,'3+']] },
+        ];
+
+        // ---- UI State ----
+        let uploadedImg = null;
+        let points = []; // [Top, Bottom]
+        let cameraStream = null;
+        let currentFacingMode = 'environment';
+        let deferredInstallPrompt = null;
+        let analysisHistory = JSON.parse(localStorage.getItem('urivision_history') || '[]');
+
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const galleryInput = document.getElementById('galleryInput');
+        const cameraInput = document.getElementById('cameraInput');
+
+        // ======== SPLASH SCREEN ========
+        setTimeout(() => {
+            document.getElementById('splashScreen').classList.add('fade-out');
+            document.getElementById('app').classList.remove('hidden');
+            setTimeout(() => document.getElementById('splashScreen').remove(), 600);
+        }, 1800);
+
+        // ======== PWA INSTALL ========
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            document.getElementById('installBanner').classList.remove('hidden');
+        });
+        document.getElementById('installBtn').onclick = async () => {
+            if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            if (outcome === 'accepted') showToast('✅', 'App installed!');
+            deferredInstallPrompt = null;
+            document.getElementById('installBanner').classList.add('hidden');
+        };
+        document.getElementById('dismissInstall').onclick = () => {
+            document.getElementById('installBanner').classList.add('hidden');
+        };
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW:', err));
+        }
+
+        // ======== NAVIGATION ========
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.onclick = () => showScreen(btn.dataset.screen);
+        });
+        document.getElementById('settingsNavBtn').onclick = () => showScreen('settings');
+
+        function showScreen(name) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            const target = document.getElementById('screen' + name.charAt(0).toUpperCase() + name.slice(1));
+            if (target) target.classList.add('active');
+            document.querySelectorAll(`.nav-item[data-screen="${name}"]`).forEach(n => n.classList.add('active'));
+            if (name === 'history') renderHistory();
+        }
+
+        // ======== GALLERY ========
+        document.getElementById('openGalleryBtn').onclick = () => galleryInput.click();
+        galleryInput.addEventListener('change', () => {
+            if (galleryInput.files.length) handleFile(galleryInput.files[0]);
+        });
+
+        // ======== CAMERA ========
+        document.getElementById('openCameraBtn').onclick = () => openLiveCamera();
+
+        async function openLiveCamera() {
+            const fullscreen = document.getElementById('cameraFullscreen');
+            const video = document.getElementById('cameraPreview');
+            try {
+                if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+                    audio: false
+                });
+                video.srcObject = cameraStream;
+                fullscreen.classList.remove('hidden');
+            } catch (err) {
+                // Fallback: use native camera input
+                cameraInput.click();
+                cameraInput.onchange = () => {
+                    if (cameraInput.files.length) handleFile(cameraInput.files[0]);
+                };
+            }
+        }
+
+        function closeCamera() {
+            if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+            document.getElementById('cameraPreview').srcObject = null;
+            document.getElementById('cameraFullscreen').classList.add('hidden');
+        }
+
+        document.getElementById('cameraCloseBtn').onclick = closeCamera;
+
+        // Shutter: capture frame from live camera
+        document.getElementById('shutterBtn').onclick = () => {
+            const video = document.getElementById('cameraPreview');
+            if (!video.srcObject) return;
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            tempCanvas.getContext('2d').drawImage(video, 0, 0);
+            const dataURL = tempCanvas.toDataURL('image/jpeg', 0.92);
+            const img = new Image();
+            img.onload = () => {
+                uploadedImg = img;
+                closeCamera();
+                showScreen('analysis');  // Show screen FIRST
+                setTimeout(() => {
+                    initCanvas();  // Then draw to visible canvas
+                    showToast('📷', 'Photo captured!');
+                }, 50);
+            };
+            img.src = dataURL;
+        };
+
+        // Switch front/back camera
+        document.getElementById('switchCamBtn').onclick = async () => {
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+                    audio: false
+                });
+                document.getElementById('cameraPreview').srcObject = cameraStream;
+            } catch (err) { showToast('⚠️', 'Could not switch camera'); }
+        };
+
+        // Gallery btn inside camera screen
+        document.getElementById('camGalleryBtn').onclick = () => { closeCamera(); galleryInput.click(); };
+
+        // ======== FILE HANDLER ========
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    uploadedImg = img;
+                    showScreen('analysis');  // Show screen FIRST so canvas is visible
+                    setTimeout(() => {
+                        initCanvas();  // Then draw to visible canvas
+                        showToast('🖼️', 'Image loaded!');
+                    }, 50);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ==========================================================================
+        // BELOW THIS LINE: EXACT COPY from Urine_Vision_Explorer.html (lines 183-503)
+        // Only UI ID references adapted for the PWA shell (statusBadge, hintOverlay)
+        // ==========================================================================
+
+        function initCanvas() {
+            document.getElementById('statusBadge').innerText = "Ready";
+            document.getElementById('statusBadge').className = "status-badge ready";
+
+            canvas.width = uploadedImg.width;
+            canvas.height = uploadedImg.height;
+            ctx.drawImage(uploadedImg, 0, 0);
+            points = [];
+            document.getElementById('hintOverlay').classList.remove('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('manualActions').style.display = 'none';
+            render();
+
+            // Auto magic scan if enabled
+            if (document.getElementById('settingAutoScan').checked) {
+                setTimeout(magicScan, 300);
+            }
+        }
+
+        // --- 🪄 MAGIC SCAN: OMNI-DIRECTIONAL ROTATION-AWARE CAPTURE ---
+        // EXACT COPY from Urine_Vision_Explorer.html
+        document.getElementById('magicScanBtn').onclick = magicScan;
+
+        function magicScan() {
+            if (!uploadedImg) return;
+            const status = document.getElementById('statusBadge');
+            status.innerText = "De-Skewing & Scanning...";
+            status.className = "status-badge scanning";
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const rawData = ctx.getImageData(0, 0, w, h).data;
+            
+            // 1. ANGLE SWEEP: Find the tilt of the strip (-30 to 30 deg)
+            let bestAngle = 0;
+            let maxPeak = 0;
+            const stepAngle = 2; // Degrees
+            
+            for (let angle = -30; angle <= 30; angle += stepAngle) {
+                const rad = angle * Math.PI / 180;
+                const cos = Math.cos(rad);
+                const sin = Math.sin(rad);
+                
+                // Sample center horizontal profile after rotation
+                let anglePeak = 0;
+                for (let x = 0; x < w; x += 20) {
+                    let whiteSum = 0;
+                    for (let y = 0; y < h; y += 40) {
+                        // (x, y) after inverse rotation
+                        const rx = Math.round(x * cos - y * sin);
+                        const ry = Math.round(x * sin + y * cos);
+                        if (rx >= 0 && rx < w && ry >= 0 && ry < h) {
+                            const idx = (ry * w + rx) * 4;
+                            if (rawData[idx] > 200) whiteSum++;
+                        }
+                    }
+                    if (whiteSum > anglePeak) anglePeak = whiteSum;
+                }
+                if (anglePeak > maxPeak) {
+                    maxPeak = anglePeak;
+                    bestAngle = angle;
+                }
+            }
+
+            // 2. FIND STRIP AXIS (X) at bestAngle
+            const rad = bestAngle * Math.PI / 180;
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+            let peakX = 0;
+            let peakVal = 0;
+            
+            for (let x = 0; x < w; x += 5) {
+                let colSum = 0;
+                for (let y = 0; y < h; y += 20) {
+                    const rx = Math.round(x * cos - y * sin);
+                    const ry = Math.round(x * sin + y * cos);
+                    if (rx >= 0 && rx < w && ry >= 0 && ry < h) {
+                        const idx = (ry * w + rx) * 4;
+                        if (rawData[idx] > 200) colSum++;
+                    }
+                }
+                if (colSum > peakVal) { peakVal = colSum; peakX = x; }
+            }
+
+            // 3. 1D PROFILE SCAN along the tilted axis
+            const profile = [];
+            for (let y = 0; y < h; y += 1) {
+                const rx = Math.round(peakX * cos - y * sin);
+                const ry = Math.round(peakX * sin + y * cos);
+                if (rx >= 0 && rx < w && ry >= 0 && ry < h) {
+                    const idx = (ry * w + rx) * 4;
+                    const luma = (rawData[idx]*0.299 + rawData[idx+1]*0.587 + rawData[idx+2]*0.114);
+                    profile.push(luma);
+                } else {
+                    profile.push(255); // Out of bounds is white (carrier-like)
+                }
+            }
+
+            // 4. BLOB DETECTION (Colored sections on tilted strip)
+            const blobs = [];
+            let inBlob = false;
+            let startY = 0;
+            for (let y = 1; y < profile.length; y++) {
+                const isWhite = profile[y] > 230; 
+                if (!isWhite && !inBlob) {
+                    inBlob = true;
+                    startY = y;
+                } else if (isWhite && inBlob) {
+                    inBlob = false;
+                    const len = y - startY;
+                    if (len > 10) { 
+                        blobs.push({ y, center: startY + len/2 });
+                    }
+                }
+            }
+
+            // 5. FINAL MAPPING
+            const type = parseInt(document.getElementById('stripTypeSelect').value);
+            const activeBlobs = blobs.slice(0, type);
+
+            if (activeBlobs.length > 0) {
+                points = activeBlobs.map(b => {
+                    const rx = peakX * cos - b.center * sin;
+                    const ry = peakX * sin + b.center * cos;
+                    return { x: rx, y: ry };
+                });
+                
+                // Manual Result for Tilt Detection
+                analyzeTilted(activeBlobs, peakX, cos, sin);
+            } else {
+                status.innerText = "Alignment Fail";
+                status.className = "status-badge error";
+                alert("Omni-Directional Alignment failed. Please ensure strip is roughly vertical or use manual mode.");
+                return;
+            }
+
+            document.getElementById('hintOverlay').classList.add('hidden');
+            render();
+            
+            status.innerText = "Omni-Captured";
+            status.className = "status-badge success";
+        }
+
+        // EXACT COPY: analyzeTilted from Urine_Vision_Explorer.html
+        function analyzeTilted(blobs, peakX, cos, sin) {
+            const results = [];
+            const type = parseInt(document.getElementById('stripTypeSelect').value);
+            const activeParams = PARAMETERS.slice(0, type);
+
+            blobs.forEach((blob, i) => {
+                const rx = Math.round(peakX * cos - blob.center * sin);
+                const ry = Math.round(peakX * sin + blob.center * cos);
+                
+                // Get Center Cluster safely
+                const imgData = ctx.getImageData(rx-2, ry-2, 5, 5).data;
+                let r = 0, g = 0, b = 0;
+                for(let j=0; j<imgData.length; j+=4) {
+                    r += imgData[j]; g += imgData[j+1]; b += imgData[j+2];
+                }
+                const avgR = Math.round(r/25);
+                const avgG = Math.round(g/25);
+                const avgB = Math.round(b/25);
+
+                const param = activeParams[i] || { name: 'Extra Pad', color_ref: [] };
+                const bestMatch = findBestMatch([avgR, avgG, avgB], param.color_ref);
+                
+                results.push({
+                    name: param.name,
+                    id: param.id,
+                    rgb: `rgb(${avgR},${avgG},${avgB})`,
+                    result: bestMatch.val,
+                    score: bestMatch.dist
+                });
+            });
+            displayResults(results);
+        }
+
+        // Canvas click handler — places points but does NOT auto-analyze
+        // User must click "Proceed" to run analysis
+        // Once 2 points are set, tapping does nothing — use Reset button
+        function handleCanvasPoint(x, y) {
+            if (!uploadedImg) return;
+            if (points.length >= 2) return;  // Locked — use Reset button
+            
+            points.push({x, y});
+            
+            if (points.length === 2) {
+                // Show ROI preview grid (but do NOT analyze yet)
+                document.getElementById('hintOverlay').classList.add('hidden');
+                document.getElementById('manualActions').style.display = 'flex';
+                document.getElementById('statusBadge').innerText = "Points Set — Tap Proceed";
+                document.getElementById('statusBadge').className = "status-badge scanning";
+            } else if (points.length === 1) {
+                document.getElementById('statusBadge').innerText = "Top Set — Tap Bottom Pad";
+                document.getElementById('statusBadge').className = "status-badge scanning";
+            }
+            
+            render();
+        }
+
+        canvas.onclick = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            handleCanvasPoint(
+                (e.clientX - rect.left) * scaleX,
+                (e.clientY - rect.top) * scaleY
+            );
+        };
+
+        // Proceed Button — runs the actual analysis
+        document.getElementById('proceedBtn').onclick = () => {
+            if (points.length === 2) {
+                analyze();
+                document.getElementById('manualActions').style.display = 'none';
+            }
+        };
+
+        // Reset Points — clear and allow re-selection
+        document.getElementById('resetPointsBtn').onclick = () => {
+            points = [];
+            document.getElementById('manualActions').style.display = 'none';
+            document.getElementById('hintOverlay').classList.remove('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('statusBadge').innerText = "Ready";
+            document.getElementById('statusBadge').className = "status-badge ready";
+            render();
+            showToast('🔄', 'Points cleared — tap again');
+        };
+
+        // Touch support for mobile — uses same handleCanvasPoint
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!uploadedImg) return;
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            handleCanvasPoint(
+                (touch.clientX - rect.left) * scaleX,
+                (touch.clientY - rect.top) * scaleY
+            );
+        }, { passive: false });
+
+        // EXACT COPY: render() from Urine_Vision_Explorer.html
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(uploadedImg, 0, 0);
+            
+            points.forEach((p, i) => {
+                ctx.fillStyle = i === 0 ? '#3b82f6' : '#22c55e';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            });
+
+            if (points.length === 2) {
+                const p1 = points[0];
+                const p2 = points[1];
+                const count = PARAMETERS.length;
+                const roiW = parseInt(document.getElementById('roiWidthInput').value);
+
+                ctx.strokeStyle = '#22c55e';
+                ctx.lineWidth = 2;
+
+                for (let i = 0; i < count; i++) {
+                    const ratio = i / (count - 1);
+                    const cx = p1.x + (p2.x - p1.x) * ratio;
+                    const cy = p1.y + (p2.y - p1.y) * ratio;
+                    ctx.strokeRect(cx - roiW/2, cy - roiW/2, roiW, roiW);
+                    
+                    ctx.fillStyle = 'rgba(34, 197, 94, 0.2)';
+                    ctx.fillRect(cx - roiW/2, cy - roiW/2, roiW, roiW);
+                }
+            }
+        }
+
+        // EXACT COPY: analyze() from Urine_Vision_Explorer.html
+        function analyze() {
+            if (points.length < 2) return;
+            const results = [];
+            const roiW = parseInt(document.getElementById('roiWidthInput').value);
+            const p1 = points[0];
+            const p2 = points[1];
+            const count = PARAMETERS.length;
+
+            for (let i = 0; i < count; i++) {
+                const ratio = i / (count - 1);
+                const cx = Math.round(p1.x + (p2.x - p1.x) * ratio);
+                const cy = Math.round(p1.y + (p2.y - p1.y) * ratio);
+                
+                // Get Center Pixel Cluster
+                const imgData = ctx.getImageData(cx-2, cy-2, 5, 5).data;
+                let r = 0, g = 0, b = 0;
+                for(let j=0; j<imgData.length; j+=4) {
+                    r += imgData[j]; g += imgData[j+1]; b += imgData[j+2];
+                }
+                const avgR = Math.round(r/25);
+                const avgG = Math.round(g/25);
+                const avgB = Math.round(b/25);
+
+                const param = PARAMETERS[i];
+                const bestMatch = findBestMatch([avgR, avgG, avgB], param.color_ref);
+                
+                results.push({
+                    name: param.name,
+                    id: param.id,
+                    rgb: `rgb(${avgR},${avgG},${avgB})`,
+                    result: bestMatch.val,
+                    score: bestMatch.dist
+                });
+            }
+            displayResults(results);
+            document.getElementById('statusBadge').innerText = "Analysis Ready";
+            document.getElementById('statusBadge').className = "status-badge success";
+        }
+
+        // EXACT COPY: findBestMatch() from Urine_Vision_Explorer.html
+        function findBestMatch(rgb, refs) {
+            let minScore = 9999;
+            let result = "Unknown";
+            refs.forEach(ref => {
+                const dist = Math.sqrt(
+                    Math.pow(rgb[0] - ref[0], 2) +
+                    Math.pow(rgb[1] - ref[1], 2) +
+                    Math.pow(rgb[2] - ref[2], 2)
+                );
+                if (dist < minScore) {
+                    minScore = dist;
+                    result = ref[3];
+                }
+            });
+            return { val: result, dist: Math.round(minScore) };
+        }
+
+        // ======== DISPLAY RESULTS (styled for PWA dark theme) ========
+        function displayResults(results) {
+            const section = document.getElementById('resultsSection');
+            const container = document.getElementById('resultsGrid');
+            section.classList.remove('hidden');
+            container.innerHTML = '';
+            results.forEach(res => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                const isNormal = res.result === 'Negative' || res.result === 'Normal' || res.result === '5.0' || res.result === '1.000';
+                
+                card.innerHTML = `
+                    <div class="result-swatch" style="background-color: ${res.rgb};"></div>
+                    <div class="result-info">
+                        <div class="result-param">${res.name}</div>
+                        <div class="result-value ${isNormal ? 'normal' : 'abnormal'}">${res.result}</div>
+                        <div class="result-delta">ΔE: ${res.score}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // Save to history
+            if (document.getElementById('settingSaveHistory').checked) {
+                saveToHistory(results);
+            }
+        }
+
+        // EXACT COPY: ROI slider handler from Urine_Vision_Explorer.html
+        document.getElementById('roiWidthInput').oninput = (e) => {
+            document.getElementById('roiWidthVal').innerText = e.target.value + "px";
+            render();
+            if(points.length === 2) analyze();
+        };
+
+        document.getElementById('sensInput').oninput = (e) => {
+            document.getElementById('sensVal').innerText = e.target.value + " ΔE";
+        };
+
+        // EXACT COPY: Coord display from Urine_Vision_Explorer.html
+        canvas.onmousemove = (e) => {
+            if(!uploadedImg) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = Math.round((e.clientX - rect.left) * scaleX);
+            const y = Math.round((e.clientY - rect.top) * scaleY);
+            document.getElementById('coordDisplay').innerText = `Pos: ${x}, ${y}`;
+        }
+
+        // ======== RESET ========
+        document.getElementById('resetAnalysisBtn').onclick = () => {
+            uploadedImg = null;
+            points = [];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('statusBadge').innerText = "Ready";
+            document.getElementById('statusBadge').className = "status-badge ready";
+            document.getElementById('hintOverlay').classList.remove('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+            showScreen('capture');
+            showToast('🔄', 'Reset complete');
+        };
+
+        // ======== HISTORY ========
+        function saveToHistory(results) {
+            const entry = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                stripType: document.getElementById('stripTypeSelect').value + '-Pad',
+                results: results,
+                summary: results.filter(r => !['Negative', 'Normal', '5.0', '1.000'].includes(r.result)).length + ' abnormal'
+            };
+            analysisHistory.unshift(entry);
+            if (analysisHistory.length > 50) analysisHistory = analysisHistory.slice(0, 50);
+            localStorage.setItem('urivision_history', JSON.stringify(analysisHistory));
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            if (analysisHistory.length === 0) {
+                list.innerHTML = '<div class="empty-state"><span class="empty-icon">📋</span><p>No analysis history yet</p><p class="empty-sub">Results appear after your first scan</p></div>';
+                return;
+            }
+            list.innerHTML = '';
+            analysisHistory.forEach(entry => {
+                const date = new Date(entry.timestamp);
+                const card = document.createElement('div');
+                card.className = 'history-card';
+                card.innerHTML = `
+                    <div class="history-thumb">🧪</div>
+                    <div class="history-info">
+                        <div class="history-date">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</div>
+                        <div class="history-strip">${entry.stripType}</div>
+                        <div class="history-summary">${entry.summary}</div>
+                    </div>
+                `;
+                card.onclick = () => { showScreen('analysis'); displayResults(entry.results); };
+                list.appendChild(card);
+            });
+        }
+
+        document.getElementById('clearHistoryBtn').onclick = () => {
+            if (confirm('Clear all analysis history?')) {
+                analysisHistory = [];
+                localStorage.removeItem('urivision_history');
+                showToast('🗑️', 'History cleared');
+                renderHistory();
+            }
+        };
+
+        // ======== TOAST ========
+        function showToast(icon, message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastIcon').textContent = icon;
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.remove('hidden');
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // ======== ONLINE / OFFLINE ========
+        function updateOnlineStatus() {
+            const dot = document.getElementById('connectionStatus');
+            dot.style.background = navigator.onLine ? '#22c55e' : '#ef4444';
+        }
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus();
+    </script>
+</body>
+
+</html>
