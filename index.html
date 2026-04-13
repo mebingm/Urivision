@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="AI-Powered Urine Strip Analyzer with Camera, Gallery, Magic Scan, and ML Calibration.">
+    <meta name="theme-color" content="#0a0e1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Urine Vision Explorer | AI Strip Analyzer</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Splash -->
+    <div id="splashScreen" class="splash-screen">
+        <div class="splash-content">
+            <div class="splash-icon"><svg width="50" height="50" viewBox="0 0 50 50" fill="none"><rect x="18" y="5" width="14" height="40" rx="3" fill="white" opacity="0.9"/><circle cx="25" cy="14" r="3.5" fill="#fbbf24"/><circle cx="25" cy="22" r="3.5" fill="#4ade80"/><circle cx="25" cy="30" r="3.5" fill="#f87171"/><circle cx="25" cy="38" r="3.5" fill="#38bdf8"/></svg></div>
+            <h1 class="splash-title">Urine Vision Explorer</h1>
+            <p class="splash-subtitle">AI-Powered Strip Analysis</p>
+            <div class="splash-loader"><div class="splash-loader-bar"></div></div>
+        </div>
+    </div>
+
+    <div id="app" class="app-container hidden">
+        <header class="top-bar">
+            <div class="top-bar-left"><span class="brand-icon">◉</span><span class="brand-name">UriVision</span></div>
+            <div class="top-bar-right"><div id="connectionStatus" style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></div></div>
+        </header>
+
+        <div id="installBanner" class="install-banner hidden">
+            <span class="install-banner-text">📲 <strong>Install</strong> this app</span>
+            <button id="installBtn" class="install-btn">Install</button>
+            <button id="dismissInstall" class="install-dismiss">✕</button>
+        </div>
+
+        <!-- ====== CAPTURE ====== -->
+        <section id="screenCapture" class="screen active">
+            <div class="capture-hero"><h1 class="hero-title">Urine Vision Explorer</h1><p class="hero-sub">Capture a strip photo or pick from gallery</p></div>
+
+            <!-- Install Guide (always visible on Android) -->
+            <div id="installGuide" style="background:linear-gradient(135deg,rgba(56,189,248,0.1),rgba(99,102,241,0.1));border:1px solid rgba(56,189,248,0.25);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:16px;display:none;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <span style="font-size:1.2rem;">📲</span>
+                    <span style="font-size:0.82rem;font-weight:700;color:var(--accent-cyan);">Install This App</span>
+                    <button id="hideInstallGuide" style="margin-left:auto;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem;">✕</button>
+                </div>
+                <div style="font-size:0.74rem;color:var(--text-secondary);line-height:1.5;">
+                    <div style="margin-bottom:4px;"><strong>Android Chrome:</strong> Tap <strong>⋮</strong> menu (top-right) → <strong>"Install app"</strong> or <strong>"Add to Home Screen"</strong></div>
+                    <div><strong>iPhone Safari:</strong> Tap <strong>⬆ Share</strong> → <strong>"Add to Home Screen"</strong></div>
+                </div>
+            </div>
+            <div class="strip-selector"><label>Strip Type</label>
+                <select id="stripTypeSelect" class="strip-select"><option value="12">Agappe 12-Pad</option><option value="11">Standard 11-Pad</option><option value="10" selected>Standard 10-Pad</option></select>
+            </div>
+            <div class="capture-actions">
+                <div class="action-card camera" id="openCameraBtn"><div class="action-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div><div class="action-label">Camera</div><div class="action-desc">Take a live photo</div></div>
+                <div class="action-card gallery" id="openGalleryBtn"><div class="action-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div><div class="action-label">Gallery</div><div class="action-desc">Pick from device</div></div>
+            </div>
+            <input type="file" id="galleryInput" accept="image/*" class="hidden">
+            <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
+        </section>
+
+        <!-- ====== ANALYSIS ====== -->
+        <section id="screenAnalysis" class="screen">
+            <div class="analysis-panel">
+                <div class="image-preview-section">
+                    <canvas id="mainCanvas"></canvas>
+                    <div class="preview-toolbar">
+                        <div class="toolbar-info"><span id="statusBadge" class="status-badge ready">Ready</span><span id="coordDisplay" style="font-size:0.65rem;color:var(--text-muted);font-family:monospace;">--</span></div>
+                        <div class="toolbar-actions"><button id="resetAnalysisBtn" class="btn-icon" title="New Image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button></div>
+                    </div>
+                </div>
+                <button id="magicScanBtn" class="btn-magic">✨ Magic Scan — Auto Detect Pads</button>
+                <div id="hintOverlay" class="hint-banner"><span class="hint-icon">👆</span><span class="hint-text"><strong>Manual:</strong> Tap <strong>top pad</strong> then <strong>bottom pad</strong>. You can <strong>drag</strong> dots to adjust.</span></div>
+                <div id="resultsSection" class="results-section hidden"><h3 class="results-section-title">Analysis Results</h3><div id="resultsGrid" class="results-grid"></div></div>
+                <div class="calibration-panel">
+                    <div class="cal-panel-title">Vision Calibration</div>
+                    <div class="cal-slider-group"><div class="cal-slider-header"><span class="cal-slider-label">ROI Width</span><span id="roiWidthVal" class="cal-slider-value">40px</span></div><input type="range" id="roiWidthInput" class="cal-slider" min="10" max="100" value="40"></div>
+                </div>
+            </div>
+            <!-- Floating Action Buttons for Analysis -->
+            <div id="fabAnalysis" class="fab-container hidden">
+                <button id="resetPointsBtn" class="fab-btn fab-reset" title="Reset Points"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg><span>Reset</span></button>
+                <button id="proceedBtn" class="fab-btn fab-proceed" title="Proceed to Analyze"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Analyze</span></button>
+            </div>
+        </section>
+
+        <!-- ====== CALIBRATION ====== -->
+        <section id="screenCalibration" class="screen">
+            <div class="section-header"><h2>🎯 Calibration Center</h2><p>Works without calibration — this is optional fine-tuning</p></div>
+
+            <!-- Sub-tabs -->
+            <div style="display:flex;gap:4px;margin-bottom:14px;background:var(--surface-1);border-radius:var(--radius-md);padding:4px;">
+                <button class="cal-tab active" data-caltab="capture" style="flex:1;padding:9px;border:none;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;background:var(--accent-cyan);color:white;">📷 Capture</button>
+                <button class="cal-tab" data-caltab="saved" style="flex:1;padding:9px;border:none;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;background:transparent;color:var(--text-muted);">📋 Saved Data</button>
+                <button class="cal-tab" data-caltab="train" style="flex:1;padding:9px;border:none;border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;background:transparent;color:var(--text-muted);">🧠 Train</button>
+            </div>
+
+            <!-- TAB: Capture Calibration Sample -->
+            <div id="calTabCapture" class="cal-tab-content">
+                <div style="display:flex;gap:8px;margin-bottom:12px;">
+                    <button id="calCameraBtn" class="btn btn-outline" style="flex:1;">📷 Camera</button>
+                    <button id="calGalleryBtn" class="btn btn-outline" style="flex:1;">🖼️ Gallery</button>
+                </div>
+                <input type="file" id="calFileInput" accept="image/*" class="hidden">
+                <input type="file" id="calCameraFileInput" accept="image/*" capture="environment" class="hidden">
+
+                <!-- Cal Canvas -->
+                <div id="calCanvasSection" style="display:none;">
+                    <div class="image-preview-section" style="margin-bottom:12px;">
+                        <canvas id="calCanvas"></canvas>
+                        <div class="preview-toolbar">
+                            <span id="calStatusBadge" class="status-badge ready">Tap Top Pad</span>
+                            <button id="calResetPointsBtn" class="btn-icon" title="Reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>
+                        </div>
+                    </div>
+
+                    <div id="calHint" class="hint-banner"><span class="hint-icon">👆</span><span class="hint-text">Tap <strong>top pad</strong> then <strong>bottom pad</strong>. You can <strong>drag</strong> dots to adjust.</span></div>
+
+                    <!-- Extracted Pads with Expected Value Selectors -->
+                    <div id="calExtractedSection" style="display:none;margin-top:14px;">
+                        <h3 style="font-size:0.75rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">SET EXPECTED VALUES</h3>
+                        <div id="calExtractedGrid" style="display:flex;flex-direction:column;gap:6px;"></div>
+                        <button id="calSaveSampleBtn" class="btn btn-success" style="width:100%;margin-top:14px;">💾 Save Calibration Sample</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Saved Calibration Data -->
+            <div id="calTabSaved" class="cal-tab-content" style="display:none;">
+                <div id="calSavedList"></div>
+            </div>
+
+            <!-- TAB: Train / Manual -->
+            <div id="calTabTrain" class="cal-tab-content" style="display:none;">
+                <!-- Auto Train -->
+                <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px;">
+                    <h3 style="font-size:0.85rem;font-weight:700;margin-bottom:6px;">🧠 Auto-Train from Saved Samples</h3>
+                    <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:12px;">Computes RGB correction factors from all saved calibration data.</p>
+                    <div id="trainSampleCount" style="font-size:0.72rem;color:var(--accent-cyan);margin-bottom:8px;">0 samples available</div>
+                    <div style="display:flex;gap:8px;">
+                        <button id="trainAllBtn" class="btn btn-success" style="flex:1;">🧠 Train All Pads</button>
+                        <div style="flex:1;display:flex;gap:4px;">
+                            <select id="trainSingleSelect" class="strip-select" style="flex:1;font-size:0.72rem;padding:6px;"></select>
+                            <button id="trainSingleBtn" class="btn btn-primary btn-sm">Train</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manual Factors -->
+                <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px;">
+                    <h3 style="font-size:0.85rem;font-weight:700;margin-bottom:6px;">✏️ Manual Factor Entry</h3>
+                    <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:10px;">Enter RGB correction offsets per pad.</p>
+                    <div id="calManualGrid" style="display:flex;flex-direction:column;gap:4px;"></div>
+                    <button id="calManualSaveBtn" class="btn btn-primary" style="width:100%;margin-top:10px;">💾 Save Manual Factors</button>
+                </div>
+
+                <!-- Active Factors -->
+                <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <h3 style="font-size:0.78rem;font-weight:700;">Active Calibration Factors</h3>
+                        <button id="calResetAllBtn" class="btn btn-danger btn-sm">Reset All</button>
+                    </div>
+                    <div id="calFactorsDisplay" style="font-size:0.68rem;color:var(--text-secondary);font-family:monospace;">No calibration — using defaults.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====== HISTORY ====== -->
+        <section id="screenHistory" class="screen">
+            <div class="section-header"><h2>Analysis History</h2><p>View past results</p></div>
+            <div id="historyList" class="history-list"><div class="empty-state"><span class="empty-icon">📋</span><p>No history yet</p></div></div>
+        </section>
+
+        <!-- ====== SETTINGS ====== -->
+        <section id="screenSettings" class="screen">
+            <div class="section-header"><h2>Settings</h2></div>
+            <div class="settings-list">
+                <div class="settings-group"><h3 class="settings-group-title">Analysis</h3>
+                    <div class="setting-item"><div class="setting-info"><span class="setting-label">Auto Magic Scan</span><span class="setting-desc">Run after image load</span></div><label class="toggle-switch"><input type="checkbox" id="settingAutoScan"><span class="toggle-slider"></span></label></div>
+                    <div class="setting-item"><div class="setting-info"><span class="setting-label">Save to History</span><span class="setting-desc">Auto-save results</span></div><label class="toggle-switch"><input type="checkbox" id="settingSaveHistory" checked><span class="toggle-slider"></span></label></div>
+                </div>
+                <div class="settings-group"><h3 class="settings-group-title">Data</h3><div class="setting-item"><button id="clearHistoryBtn" class="btn btn-danger btn-sm">Clear History</button></div></div>
+                <div class="settings-group"><h3 class="settings-group-title">About</h3><div class="about-info"><p><strong>Urine Vision Explorer</strong> v1.2.0</p><p>Camera • Gallery • Magic Scan • ML Calibration</p></div></div>
+            </div>
+        </section>
+
+        <!-- Bottom Nav -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-screen="capture"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Capture</span></button>
+            <button class="nav-item" data-screen="analysis"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span>Analysis</span></button>
+            <button class="nav-item" data-screen="calibration"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>Calibrate</span></button>
+            <button class="nav-item" data-screen="history"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>History</span></button>
+            <button class="nav-item" data-screen="settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><span>Settings</span></button>
+        </nav>
+    </div>
+
+    <!-- Camera -->
+    <div id="cameraFullscreen" class="camera-fullscreen hidden">
+        <div class="camera-top-bar"><button id="cameraCloseBtn" class="camera-close-btn">✕</button><span style="color:white;font-size:0.8rem;font-weight:700;">📷 Camera</span><div style="width:36px;"></div></div>
+        <div class="camera-view"><video id="cameraPreview" autoplay playsinline muted></video><div class="camera-guide"><div class="guide-frame"><div class="guide-corner tl"></div><div class="guide-corner tr"></div><div class="guide-corner bl"></div><div class="guide-corner br"></div><span class="guide-label-top">TOP</span><span class="guide-label-bottom">BOTTOM</span></div><span class="guide-text">Align strip vertically</span></div></div>
+        <div class="camera-controls-bar">
+            <button id="camGalleryBtn" class="cam-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
+            <button id="shutterBtn" class="capture-shutter"></button>
+            <button id="switchCamBtn" class="cam-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>
+        </div>
+    </div>
+
+    <!-- Floating Action Buttons for Calibration -->
+    <div id="fabCalibration" class="fab-container hidden">
+        <button id="calResetDotsBtn" class="fab-btn fab-reset" title="Reset Points"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg><span>Reset</span></button>
+        <button id="calExtractBtn" class="fab-btn fab-proceed" title="Extract Pad Colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Extract</span></button>
+    </div>
+
+    <div id="toast" class="toast hidden"><span id="toastIcon" class="toast-icon">✓</span><span id="toastMessage" class="toast-message"></span></div>
+
+<script>
+// =====================================================================
+// URINE VISION EXPLORER v1.2
+// EXACT detection from Urine_Vision_Explorer.html
+// + Camera + Gallery + PWA + Calibration with manual pad selection
+// =====================================================================
+
+const PARAMETERS = [
+    { id:'LEU', name:'Leukocytes', color_ref:[[255,255,255,'Negative'],[235,210,235,'Trace'],[200,160,200,'1+'],[160,110,160,'2+']] },
+    { id:'NIT', name:'Nitrite', color_ref:[[255,255,255,'Negative'],[255,230,230,'Positive']] },
+    { id:'URO', name:'Urobilinogen', color_ref:[[255,250,230,'Normal'],[255,230,200,'2'],[255,200,180,'4'],[255,160,160,'8']] },
+    { id:'PRO', name:'Protein', color_ref:[[255,255,200,'Negative'],[230,250,180,'Trace'],[190,230,160,'1+'],[140,210,140,'2+']] },
+    { id:'PH',  name:'pH', color_ref:[[255,180,100,'5.0'],[255,210,120,'6.0'],[220,220,120,'7.0'],[150,200,120,'8.0']] },
+    { id:'BLD', name:'Blood', color_ref:[[255,210,120,'Negative'],[255,230,150,'Trace'],[200,230,130,'1+'],[140,200,100,'2+']] },
+    { id:'SG',  name:'Specific Gravity', color_ref:[[50,100,150,'1.000'],[100,140,140,'1.010'],[150,160,100,'1.020'],[180,160,50,'1.030']] },
+    { id:'KET', name:'Ketone', color_ref:[[255,255,240,'Negative'],[245,230,245,'Trace'],[225,200,225,'1+'],[200,160,200,'2+']] },
+    { id:'BIL', name:'Bilirubin', color_ref:[[255,255,240,'Negative'],[255,240,200,'1+'],[255,220,160,'2+'],[255,200,120,'3+']] },
+    { id:'GLU', name:'Glucose', color_ref:[[100,200,200,'Negative'],[140,220,160,'Trace'],[180,220,120,'1+'],[210,210,80,'2+'],[180,180,40,'3+']] },
+];
+
+// ---- STATE ----
+let uploadedImg = null, points = [], cameraStream = null, currentFacingMode = 'environment', deferredInstallPrompt = null;
+let analysisHistory = JSON.parse(localStorage.getItem('urivision_history') || '[]');
+let calFactors = JSON.parse(localStorage.getItem('urivision_cal') || '{}');
+let calSavedSamples = JSON.parse(localStorage.getItem('urivision_caldata') || '[]');
+
+// Calibration state
+let calImg = null, calPoints = [], calExtractedPads = [];
+
+// ---- DRAG STATE ----
+let draggingPoint = -1;   // -1 = not dragging
+let dragStarted = false;  // true once finger moves beyond threshold
+const TOUCH_HIT_RADIUS = 40;   // px on canvas — how close tap must be to grab a dot
+const EDGE_DEAD_ZONE = 15;     // px CSS — ignore taps very near canvas edge
+const MIN_DOT_DISTANCE = 30;   // px on canvas — minimum distance between the two dots
+
+// Calibration drag state
+let calDraggingPoint = -1;
+let calDragStarted = false;
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const calCanvas = document.getElementById('calCanvas');
+const calCtx = calCanvas.getContext('2d', { willReadFrequently: true });
+const galleryInput = document.getElementById('galleryInput');
+const cameraInput = document.getElementById('cameraInput');
+
+// ======== SPLASH ========
+setTimeout(() => { document.getElementById('splashScreen').classList.add('fade-out'); document.getElementById('app').classList.remove('hidden'); setTimeout(()=>document.getElementById('splashScreen').remove(),600); }, 1800);
+
+// ======== PWA ========
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstallPrompt=e; document.getElementById('installBanner').classList.remove('hidden'); });
+document.getElementById('installBtn').onclick = async()=>{ if(!deferredInstallPrompt)return; deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; deferredInstallPrompt=null; document.getElementById('installBanner').classList.add('hidden'); };
+document.getElementById('dismissInstall').onclick = ()=>document.getElementById('installBanner').classList.add('hidden');
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+// ======== NAVIGATION ========
+document.querySelectorAll('.nav-item').forEach(btn=>{ btn.onclick=()=>showScreen(btn.dataset.screen); });
+function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    const el = document.getElementById('screen'+name.charAt(0).toUpperCase()+name.slice(1));
+    if(el) el.classList.add('active');
+    document.querySelectorAll(`.nav-item[data-screen="${name}"]`).forEach(n=>n.classList.add('active'));
+    if(name==='history') renderHistory();
+    if(name==='calibration') { renderCalSaved(); renderCalFactors(); renderManualGrid(); populateTrainSelect(); }
+}
+
+// ======== GALLERY & CAMERA ========
+document.getElementById('openGalleryBtn').onclick = ()=>{ galleryInput.value=''; galleryInput.click(); };
+galleryInput.addEventListener('change', ()=>{ if(galleryInput.files.length) handleFile(galleryInput.files[0]); });
+document.getElementById('openCameraBtn').onclick = ()=>openLiveCamera('analysis');
+
+let cameraTarget = 'analysis'; // or 'calibration'
+async function openLiveCamera(target) {
+    cameraTarget = target;
+    try {
+        if(cameraStream) cameraStream.getTracks().forEach(t=>t.stop());
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:currentFacingMode,width:{ideal:1920},height:{ideal:1080}}, audio:false });
+        document.getElementById('cameraPreview').srcObject = cameraStream;
+        document.getElementById('cameraFullscreen').classList.remove('hidden');
+    } catch(e) {
+        if(target==='calibration') { document.getElementById('calCameraFileInput').value=''; document.getElementById('calCameraFileInput').click(); document.getElementById('calCameraFileInput').onchange=function(){if(this.files.length)handleCalFile(this.files[0]);}; }
+        else { cameraInput.value=''; cameraInput.click(); cameraInput.onchange=()=>{if(cameraInput.files.length)handleFile(cameraInput.files[0]);}; }
+    }
+}
+function closeCamera() { if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;} document.getElementById('cameraPreview').srcObject=null; document.getElementById('cameraFullscreen').classList.add('hidden'); }
+document.getElementById('cameraCloseBtn').onclick = closeCamera;
+document.getElementById('shutterBtn').onclick = ()=>{
+    const video=document.getElementById('cameraPreview'); if(!video.srcObject)return;
+    const tc=document.createElement('canvas'); tc.width=video.videoWidth; tc.height=video.videoHeight; tc.getContext('2d').drawImage(video,0,0);
+    const img=new Image();
+    img.onload=()=>{ closeCamera(); if(cameraTarget==='calibration'){calImg=img;showScreen('calibration');setTimeout(()=>initCalCanvas(),80);} else{uploadedImg=img;showScreen('analysis');setTimeout(()=>{initCanvas();showToast('📷','Captured!');},80);} };
+    img.src=tc.toDataURL('image/jpeg',0.92);
+};
+document.getElementById('switchCamBtn').onclick = async()=>{ currentFacingMode=currentFacingMode==='environment'?'user':'environment'; if(cameraStream)cameraStream.getTracks().forEach(t=>t.stop()); try{cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:currentFacingMode,width:{ideal:1920},height:{ideal:1080}},audio:false});document.getElementById('cameraPreview').srcObject=cameraStream;}catch(e){showToast('⚠️','Switch failed');} };
+document.getElementById('camGalleryBtn').onclick = ()=>{ closeCamera(); galleryInput.value=''; galleryInput.click(); };
+
+// ======== FILE HANDLER ========
+function handleFile(file) {
+    const reader=new FileReader(); reader.onload=(e)=>{ const img=new Image(); img.onload=()=>{ uploadedImg=img; showScreen('analysis'); setTimeout(()=>{initCanvas();showToast('🖼️','Loaded!');},80); }; img.src=e.target.result; }; reader.readAsDataURL(file);
+}
+
+// ======== ANALYSIS CANVAS ========
+function initCanvas() {
+    document.getElementById('statusBadge').innerText="Ready"; document.getElementById('statusBadge').className="status-badge ready";
+    canvas.width=uploadedImg.width; canvas.height=uploadedImg.height; ctx.drawImage(uploadedImg,0,0);
+    points=[]; document.getElementById('hintOverlay').classList.remove('hidden'); document.getElementById('resultsSection').classList.add('hidden'); document.getElementById('fabAnalysis').classList.add('hidden'); render();
+    if(document.getElementById('settingAutoScan').checked) setTimeout(magicScan,300);
+}
+
+// ======== MAGIC SCAN (EXACT from Urine_Vision_Explorer.html) ========
+document.getElementById('magicScanBtn').onclick = magicScan;
+function magicScan() {
+    if(!uploadedImg)return;
+    const status=document.getElementById('statusBadge'); status.innerText="De-Skewing..."; status.className="status-badge scanning";
+    const w=canvas.width, h=canvas.height, rawData=ctx.getImageData(0,0,w,h).data;
+    let bestAngle=0,maxPeak=0;
+    for(let angle=-30;angle<=30;angle+=2){const rad=angle*Math.PI/180,cos=Math.cos(rad),sin=Math.sin(rad);let ap=0;for(let x=0;x<w;x+=20){let ws=0;for(let y=0;y<h;y+=40){const rx=Math.round(x*cos-y*sin),ry=Math.round(x*sin+y*cos);if(rx>=0&&rx<w&&ry>=0&&ry<h){if(rawData[(ry*w+rx)*4]>200)ws++;}}if(ws>ap)ap=ws;}if(ap>maxPeak){maxPeak=ap;bestAngle=angle;}}
+    const rad=bestAngle*Math.PI/180,cos=Math.cos(rad),sin=Math.sin(rad);
+    let peakX=0,peakVal=0;
+    for(let x=0;x<w;x+=5){let cs=0;for(let y=0;y<h;y+=20){const rx=Math.round(x*cos-y*sin),ry=Math.round(x*sin+y*cos);if(rx>=0&&rx<w&&ry>=0&&ry<h){if(rawData[(ry*w+rx)*4]>200)cs++;}}if(cs>peakVal){peakVal=cs;peakX=x;}}
+    const profile=[];for(let y=0;y<h;y++){const rx=Math.round(peakX*cos-y*sin),ry=Math.round(peakX*sin+y*cos);if(rx>=0&&rx<w&&ry>=0&&ry<h){const idx=(ry*w+rx)*4;profile.push(rawData[idx]*0.299+rawData[idx+1]*0.587+rawData[idx+2]*0.114);}else profile.push(255);}
+    const blobs=[];let inBlob=false,startY=0;
+    for(let y=1;y<profile.length;y++){const iw=profile[y]>230;if(!iw&&!inBlob){inBlob=true;startY=y;}else if(iw&&inBlob){inBlob=false;const len=y-startY;if(len>10)blobs.push({y,center:startY+len/2});}}
+    const type=parseInt(document.getElementById('stripTypeSelect').value),activeBlobs=blobs.slice(0,type);
+    if(activeBlobs.length>0){points=activeBlobs.map(b=>({x:peakX*cos-b.center*sin,y:peakX*sin+b.center*cos}));analyzeTilted(activeBlobs,peakX,cos,sin);}
+    else{status.innerText="Fail";status.className="status-badge error";showToast('⚠️','Auto-detect failed. Use manual mode.');return;}
+    document.getElementById('hintOverlay').classList.add('hidden');document.getElementById('fabAnalysis').classList.add('hidden');render();
+    status.innerText="Omni-Captured";status.className="status-badge success";
+}
+
+function analyzeTilted(blobs,peakX,cos,sin) {
+    const results=[],type=parseInt(document.getElementById('stripTypeSelect').value),activeParams=PARAMETERS.slice(0,type);
+    blobs.forEach((blob,i)=>{const rx=Math.round(peakX*cos-blob.center*sin),ry=Math.round(peakX*sin+blob.center*cos);
+        const imgData=ctx.getImageData(rx-2,ry-2,5,5).data;let r=0,g=0,b=0;for(let j=0;j<imgData.length;j+=4){r+=imgData[j];g+=imgData[j+1];b+=imgData[j+2];}
+        let avgR=Math.round(r/25),avgG=Math.round(g/25),avgB=Math.round(b/25);
+        const param=activeParams[i]||{name:'Extra',id:'EXT',color_ref:[]};const cf=calFactors[param.id]||[0,0,0];
+        const cR=clamp(avgR+cf[0]),cG=clamp(avgG+cf[1]),cB=clamp(avgB+cf[2]);
+        const bm=findBestMatch([cR,cG,cB],param.color_ref);
+        results.push({name:param.name,id:param.id,rgb:`rgb(${avgR},${avgG},${avgB})`,result:bm.val,score:bm.dist,rawRgb:[avgR,avgG,avgB]});
+    }); displayResults(results);
+}
+function clamp(v){return Math.max(0,Math.min(255,Math.round(v)));}
+
+// ======== HELPER: Check if tap is near canvas edge (dead zone) ========
+function isInDeadZone(cssX, cssY, rect) {
+    return cssX < EDGE_DEAD_ZONE || cssY < EDGE_DEAD_ZONE ||
+           cssX > (rect.width - EDGE_DEAD_ZONE) || cssY > (rect.height - EDGE_DEAD_ZONE);
+}
+
+// ======== HELPER: Find nearest point within hit radius ========
+function findNearestPoint(canvasX, canvasY, pts, rect) {
+    const scaleX = rect.width > 0 ? (rect.width / canvas.width) : 1;
+    // Hit radius in canvas-space
+    const hitR = TOUCH_HIT_RADIUS / scaleX;
+    let bestIdx = -1, bestDist = Infinity;
+    pts.forEach((p, i) => {
+        const d = Math.hypot(p.x - canvasX, p.y - canvasY);
+        if (d < hitR && d < bestDist) { bestDist = d; bestIdx = i; }
+    });
+    return bestIdx;
+}
+
+// ======== MANUAL TOUCH — Analysis Canvas (with drag support) ========
+function handleCanvasPoint(x, y) {
+    if (!uploadedImg || points.length >= 2) return;
+    // If there's already 1 point, enforce minimum distance
+    if (points.length === 1) {
+        const d = Math.hypot(x - points[0].x, y - points[0].y);
+        if (d < MIN_DOT_DISTANCE) { showToast('⚠️', 'Too close to first point'); return; }
+    }
+    points.push({ x, y });
+    if (points.length === 2) {
+        document.getElementById('hintOverlay').classList.add('hidden');
+        document.getElementById('fabAnalysis').classList.remove('hidden');
+        document.getElementById('statusBadge').innerText = "Points Set — Drag to adjust";
+        document.getElementById('statusBadge').className = "status-badge scanning";
+    } else {
+        document.getElementById('statusBadge').innerText = "Top Set — Tap Bottom Pad";
+        document.getElementById('statusBadge').className = "status-badge scanning";
+    }
+    render();
+}
+
+// --- Touch events with drag support for Analysis canvas ---
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!uploadedImg) return;
+    const t = e.touches[0], r = canvas.getBoundingClientRect();
+    const cssX = t.clientX - r.left, cssY = t.clientY - r.top;
+    // Dead zone check
+    if (isInDeadZone(cssX, cssY, r)) return;
+    const cx = cssX * (canvas.width / r.width), cy = cssY * (canvas.height / r.height);
+    // Try to grab an existing dot for dragging
+    const nearest = findNearestPoint(cx, cy, points, r);
+    if (nearest >= 0) {
+        draggingPoint = nearest;
+        dragStarted = false;
+        return;
+    }
+    // Otherwise place a new point
+    handleCanvasPoint(cx, cy);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (draggingPoint < 0 || !uploadedImg) return;
+    dragStarted = true;
+    const t = e.touches[0], r = canvas.getBoundingClientRect();
+    const cx = (t.clientX - r.left) * (canvas.width / r.width);
+    const cy = (t.clientY - r.top) * (canvas.height / r.height);
+    // Clamp within canvas
+    points[draggingPoint].x = Math.max(0, Math.min(canvas.width, cx));
+    points[draggingPoint].y = Math.max(0, Math.min(canvas.height, cy));
+    render();
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (draggingPoint >= 0 && dragStarted) {
+        showToast('📍', `Point ${draggingPoint === 0 ? 'TOP' : 'BOTTOM'} repositioned`);
+    }
+    draggingPoint = -1;
+    dragStarted = false;
+}, { passive: false });
+
+// Mouse fallback for desktop
+canvas.onclick = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const cssX = e.clientX - r.left, cssY = e.clientY - r.top;
+    if (isInDeadZone(cssX, cssY, r)) return;
+    handleCanvasPoint(cssX * (canvas.width / r.width), cssY * (canvas.height / r.height));
+};
+
+document.getElementById('proceedBtn').onclick = () => {
+    if (points.length === 2) { analyze(); document.getElementById('fabAnalysis').classList.add('hidden'); }
+};
+document.getElementById('resetPointsBtn').onclick = () => {
+    points = [];
+    document.getElementById('fabAnalysis').classList.add('hidden');
+    document.getElementById('hintOverlay').classList.remove('hidden');
+    document.getElementById('resultsSection').classList.add('hidden');
+    document.getElementById('statusBadge').innerText = "Ready";
+    document.getElementById('statusBadge').className = "status-badge ready";
+    render();
+};
+
+// ======== RENDER (Enhanced with draggable dots) ========
+function render() {
+    if (!uploadedImg) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(uploadedImg, 0, 0);
+    const dotRadius = Math.max(12, Math.min(canvas.width, canvas.height) * 0.012);
+    points.forEach((p, i) => {
+        // Outer glow ring (indicates draggable)
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, dotRadius + 8, 0, Math.PI * 2);
+        ctx.strokeStyle = i === 0 ? 'rgba(59,130,246,0.35)' : 'rgba(34,197,94,0.35)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([6, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // Main dot
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, dotRadius, 0, Math.PI * 2);
+        ctx.fillStyle = i === 0 ? '#3b82f6' : '#22c55e';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        // Crosshair inside dot
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(p.x - dotRadius * 0.5, p.y); ctx.lineTo(p.x + dotRadius * 0.5, p.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(p.x, p.y - dotRadius * 0.5); ctx.lineTo(p.x, p.y + dotRadius * 0.5); ctx.stroke();
+        // Label
+        const label = i === 0 ? 'TOP' : 'BOTTOM';
+        ctx.font = `bold ${Math.max(11, dotRadius * 0.9)}px Inter, sans-serif`;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        const labelX = p.x + dotRadius + 8;
+        // Background for label
+        const metrics = ctx.measureText(label);
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(labelX - 4, p.y - 8, metrics.width + 8, 16);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(label, labelX, p.y);
+    });
+    if (points.length === 2) {
+        const p1 = points[0], p2 = points[1], count = PARAMETERS.length;
+        const roiW = parseInt(document.getElementById('roiWidthInput').value);
+        ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 2;
+        for (let i = 0; i < count; i++) {
+            const ratio = i / (count - 1), cx = p1.x + (p2.x - p1.x) * ratio, cy = p1.y + (p2.y - p1.y) * ratio;
+            ctx.strokeRect(cx - roiW / 2, cy - roiW / 2, roiW, roiW);
+            ctx.fillStyle = 'rgba(34,197,94,0.2)';
+            ctx.fillRect(cx - roiW / 2, cy - roiW / 2, roiW, roiW);
+        }
+    }
+}
+
+// ======== ANALYZE (EXACT + calibration) ========
+function analyze(){if(points.length<2)return;const results=[],p1=points[0],p2=points[1],count=PARAMETERS.length;
+    for(let i=0;i<count;i++){const ratio=i/(count-1),cx=Math.round(p1.x+(p2.x-p1.x)*ratio),cy=Math.round(p1.y+(p2.y-p1.y)*ratio);
+        const imgData=ctx.getImageData(cx-2,cy-2,5,5).data;let r=0,g=0,b=0;for(let j=0;j<imgData.length;j+=4){r+=imgData[j];g+=imgData[j+1];b+=imgData[j+2];}
+        let avgR=Math.round(r/25),avgG=Math.round(g/25),avgB=Math.round(b/25);const param=PARAMETERS[i],cf=calFactors[param.id]||[0,0,0];
+        const cR=clamp(avgR+cf[0]),cG=clamp(avgG+cf[1]),cB=clamp(avgB+cf[2]);const bm=findBestMatch([cR,cG,cB],param.color_ref);
+        results.push({name:param.name,id:param.id,rgb:`rgb(${avgR},${avgG},${avgB})`,result:bm.val,score:bm.dist,rawRgb:[avgR,avgG,avgB]});}
+    displayResults(results);document.getElementById('statusBadge').innerText="Analysis Ready";document.getElementById('statusBadge').className="status-badge success";}
+
+function findBestMatch(rgb,refs){let ms=9999,result="Unknown";refs.forEach(ref=>{const d=Math.sqrt(Math.pow(rgb[0]-ref[0],2)+Math.pow(rgb[1]-ref[1],2)+Math.pow(rgb[2]-ref[2],2));if(d<ms){ms=d;result=ref[3];}});return{val:result,dist:Math.round(ms)};}
+
+function displayResults(results){document.getElementById('resultsSection').classList.remove('hidden');const c=document.getElementById('resultsGrid');c.innerHTML='';
+    results.forEach(res=>{const isN=['Negative','Normal','5.0','1.000'].includes(res.result);const hasCal=calFactors[res.id]&&(calFactors[res.id][0]||calFactors[res.id][1]||calFactors[res.id][2]);
+        const card=document.createElement('div');card.className='result-card';card.innerHTML=`<div class="result-swatch" style="background:${res.rgb};"></div><div class="result-info"><div class="result-param">${res.name}${hasCal?' 🎯':''}</div><div class="result-value ${isN?'normal':'abnormal'}">${res.result}</div><div class="result-delta">ΔE: ${res.score}</div></div>`;c.appendChild(card);});
+    if(document.getElementById('settingSaveHistory').checked)saveToHistory(results);}
+
+document.getElementById('roiWidthInput').oninput=(e)=>{document.getElementById('roiWidthVal').innerText=e.target.value+"px";render();};
+canvas.onmousemove=(e)=>{if(!uploadedImg)return;const r=canvas.getBoundingClientRect();document.getElementById('coordDisplay').innerText=`${Math.round((e.clientX-r.left)*(canvas.width/r.width))}, ${Math.round((e.clientY-r.top)*(canvas.height/r.height))}`;};
+document.getElementById('resetAnalysisBtn').onclick=()=>{uploadedImg=null;points=[];ctx.clearRect(0,0,canvas.width,canvas.height);document.getElementById('statusBadge').innerText="Ready";document.getElementById('statusBadge').className="status-badge ready";document.getElementById('hintOverlay').classList.remove('hidden');document.getElementById('resultsSection').classList.add('hidden');document.getElementById('fabAnalysis').classList.add('hidden');showScreen('capture');};
+
+// ======== HISTORY ========
+function saveToHistory(results){analysisHistory.unshift({id:Date.now(),timestamp:new Date().toISOString(),stripType:document.getElementById('stripTypeSelect').value+'-Pad',results,summary:results.filter(r=>!['Negative','Normal','5.0','1.000'].includes(r.result)).length+' abnormal'});if(analysisHistory.length>50)analysisHistory=analysisHistory.slice(0,50);localStorage.setItem('urivision_history',JSON.stringify(analysisHistory));}
+function renderHistory(){const list=document.getElementById('historyList');if(!analysisHistory.length){list.innerHTML='<div class="empty-state"><span class="empty-icon">📋</span><p>No history</p></div>';return;}list.innerHTML='';
+    analysisHistory.forEach(entry=>{const d=new Date(entry.timestamp),card=document.createElement('div');card.className='history-card';card.innerHTML=`<div class="history-thumb">🧪</div><div class="history-info"><div class="history-date">${d.toLocaleDateString()} ${d.toLocaleTimeString()}</div><div class="history-strip">${entry.stripType}</div><div class="history-summary">${entry.summary}</div></div>`;card.onclick=()=>{showScreen('analysis');displayResults(entry.results);};list.appendChild(card);});}
+document.getElementById('clearHistoryBtn').onclick=()=>{if(confirm('Clear?')){analysisHistory=[];localStorage.removeItem('urivision_history');showToast('🗑️','Cleared');renderHistory();}};
+
+// =====================================================================
+// ======== CALIBRATION SYSTEM — Manual Pad Selection ========
+// =====================================================================
+
+// Cal tabs
+document.querySelectorAll('.cal-tab').forEach(tab=>{tab.onclick=()=>{
+    document.querySelectorAll('.cal-tab').forEach(t=>{t.style.background='transparent';t.style.color='var(--text-muted)';});
+    tab.style.background='var(--accent-cyan)';tab.style.color='white';
+    document.querySelectorAll('.cal-tab-content').forEach(c=>c.style.display='none');
+    document.getElementById('calTab'+tab.dataset.caltab.charAt(0).toUpperCase()+tab.dataset.caltab.slice(1)).style.display='block';
+};});
+
+// ---- CAL: Load Image ----
+document.getElementById('calGalleryBtn').onclick=()=>{const fi=document.getElementById('calFileInput');fi.value='';fi.click();};
+document.getElementById('calFileInput').addEventListener('change',function(){if(this.files.length)handleCalFile(this.files[0]);});
+document.getElementById('calCameraBtn').onclick=()=>openLiveCamera('calibration');
+
+function handleCalFile(file){
+    const reader=new FileReader();reader.onload=(e)=>{const img=new Image();img.onload=()=>{calImg=img;initCalCanvas();};img.src=e.target.result;};reader.readAsDataURL(file);
+}
+
+// ---- CAL: Canvas with Manual Green Dots + Drag Support ----
+function initCalCanvas(){
+    document.getElementById('calCanvasSection').style.display='block';
+    calCanvas.width=calImg.width;calCanvas.height=calImg.height;calCtx.drawImage(calImg,0,0);
+    calPoints=[];calExtractedPads=[];
+    document.getElementById('calHint').style.display='flex';document.getElementById('fabCalibration').classList.add('hidden');document.getElementById('calExtractedSection').style.display='none';
+    document.getElementById('calStatusBadge').innerText="Tap Top Pad";document.getElementById('calStatusBadge').className="status-badge ready";
+    renderCal();
+}
+
+function renderCal(){
+    if(!calImg)return;calCtx.clearRect(0,0,calCanvas.width,calCanvas.height);calCtx.drawImage(calImg,0,0);
+    const dotRadius = Math.max(12, Math.min(calCanvas.width, calCanvas.height) * 0.012);
+    calPoints.forEach((p,i)=>{
+        // Outer glow ring
+        calCtx.beginPath(); calCtx.arc(p.x,p.y,dotRadius+8,0,Math.PI*2);
+        calCtx.strokeStyle=i===0?'rgba(59,130,246,0.35)':'rgba(34,197,94,0.35)'; calCtx.lineWidth=3;
+        calCtx.setLineDash([6,4]); calCtx.stroke(); calCtx.setLineDash([]);
+        // Main dot
+        calCtx.fillStyle=i===0?'#3b82f6':'#22c55e';calCtx.beginPath();calCtx.arc(p.x,p.y,dotRadius,0,Math.PI*2);calCtx.fill();calCtx.strokeStyle='#fff';calCtx.lineWidth=3;calCtx.stroke();
+        // Crosshair
+        calCtx.strokeStyle='rgba(255,255,255,0.7)';calCtx.lineWidth=1.5;
+        calCtx.beginPath();calCtx.moveTo(p.x-dotRadius*0.5,p.y);calCtx.lineTo(p.x+dotRadius*0.5,p.y);calCtx.stroke();
+        calCtx.beginPath();calCtx.moveTo(p.x,p.y-dotRadius*0.5);calCtx.lineTo(p.x,p.y+dotRadius*0.5);calCtx.stroke();
+        // Label
+        const label=i===0?'TOP':'BOTTOM'; calCtx.font=`bold ${Math.max(11,dotRadius*0.9)}px Inter,sans-serif`;
+        calCtx.textAlign='left';calCtx.textBaseline='middle';const lx=p.x+dotRadius+8;
+        const m=calCtx.measureText(label); calCtx.fillStyle='rgba(0,0,0,0.6)';calCtx.fillRect(lx-4,p.y-8,m.width+8,16);
+        calCtx.fillStyle='#fff';calCtx.fillText(label,lx,p.y);
+    });
+    if(calPoints.length===2){
+        const p1=calPoints[0],p2=calPoints[1],count=PARAMETERS.length;
+        calCtx.strokeStyle='#22c55e';calCtx.lineWidth=2;
+        for(let i=0;i<count;i++){const ratio=i/(count-1),cx=p1.x+(p2.x-p1.x)*ratio,cy=p1.y+(p2.y-p1.y)*ratio;
+            calCtx.strokeRect(cx-20,cy-20,40,40);calCtx.fillStyle='rgba(34,197,94,0.2)';calCtx.fillRect(cx-20,cy-20,40,40);}
+    }
+}
+
+function handleCalPoint(x,y){
+    if(!calImg||calPoints.length>=2)return;
+    if(calPoints.length===1){
+        const d=Math.hypot(x-calPoints[0].x,y-calPoints[0].y);
+        if(d<MIN_DOT_DISTANCE){showToast('⚠️','Too close to first point');return;}
+    }
+    calPoints.push({x,y});
+    if(calPoints.length===2){document.getElementById('calHint').style.display='none';document.getElementById('fabCalibration').classList.remove('hidden');
+        document.getElementById('calStatusBadge').innerText="Points Set — Drag to adjust";document.getElementById('calStatusBadge').className="status-badge scanning";}
+    else{document.getElementById('calStatusBadge').innerText="Top Set — Tap Bottom Pad";document.getElementById('calStatusBadge').className="status-badge scanning";}
+    renderCal();
+}
+
+// --- Touch events with drag support for Calibration canvas ---
+calCanvas.addEventListener('touchstart',(e)=>{
+    e.preventDefault();if(!calImg)return;
+    const t=e.touches[0],r=calCanvas.getBoundingClientRect();
+    const cssX=t.clientX-r.left,cssY=t.clientY-r.top;
+    if(isInDeadZone(cssX,cssY,r))return;
+    const cx=cssX*(calCanvas.width/r.width),cy=cssY*(calCanvas.height/r.height);
+    // Try drag existing dot
+    const scaleX=r.width>0?(r.width/calCanvas.width):1;
+    const hitR=TOUCH_HIT_RADIUS/scaleX;
+    let bestIdx=-1,bestDist=Infinity;
+    calPoints.forEach((p,i)=>{const d=Math.hypot(p.x-cx,p.y-cy);if(d<hitR&&d<bestDist){bestDist=d;bestIdx=i;}});
+    if(bestIdx>=0){calDraggingPoint=bestIdx;calDragStarted=false;return;}
+    handleCalPoint(cx,cy);
+},{passive:false});
+
+calCanvas.addEventListener('touchmove',(e)=>{
+    e.preventDefault();if(calDraggingPoint<0||!calImg)return;
+    calDragStarted=true;
+    const t=e.touches[0],r=calCanvas.getBoundingClientRect();
+    const cx=(t.clientX-r.left)*(calCanvas.width/r.width),cy=(t.clientY-r.top)*(calCanvas.height/r.height);
+    calPoints[calDraggingPoint].x=Math.max(0,Math.min(calCanvas.width,cx));
+    calPoints[calDraggingPoint].y=Math.max(0,Math.min(calCanvas.height,cy));
+    renderCal();
+},{passive:false});
+
+calCanvas.addEventListener('touchend',(e)=>{
+    e.preventDefault();
+    if(calDraggingPoint>=0&&calDragStarted){showToast('📍',`Point ${calDraggingPoint===0?'TOP':'BOTTOM'} repositioned`);}
+    calDraggingPoint=-1;calDragStarted=false;
+},{passive:false});
+
+calCanvas.onclick=(e)=>{const r=calCanvas.getBoundingClientRect();const cssX=e.clientX-r.left,cssY=e.clientY-r.top;if(isInDeadZone(cssX,cssY,r))return;handleCalPoint(cssX*(calCanvas.width/r.width),cssY*(calCanvas.height/r.height));};
+
+document.getElementById('calResetPointsBtn').onclick=()=>{calPoints=[];calExtractedPads=[];document.getElementById('calHint').style.display='flex';document.getElementById('fabCalibration').classList.add('hidden');document.getElementById('calExtractedSection').style.display='none';document.getElementById('calStatusBadge').innerText="Tap Top Pad";document.getElementById('calStatusBadge').className="status-badge ready";renderCal();};
+document.getElementById('calResetDotsBtn').onclick=()=>{calPoints=[];document.getElementById('calHint').style.display='flex';document.getElementById('fabCalibration').classList.add('hidden');document.getElementById('calExtractedSection').style.display='none';document.getElementById('calStatusBadge').innerText="Tap Top Pad";document.getElementById('calStatusBadge').className="status-badge ready";renderCal();};
+
+// ---- CAL: Extract Pad Colors ----
+document.getElementById('calExtractBtn').onclick=()=>{
+    if(calPoints.length<2)return;
+    calExtractedPads=[];
+    const p1=calPoints[0],p2=calPoints[1],count=PARAMETERS.length;
+    for(let i=0;i<count;i++){
+        const ratio=i/(count-1),cx=Math.round(p1.x+(p2.x-p1.x)*ratio),cy=Math.round(p1.y+(p2.y-p1.y)*ratio);
+        const imgData=calCtx.getImageData(cx-2,cy-2,5,5).data;let r=0,g=0,b=0;
+        for(let j=0;j<imgData.length;j+=4){r+=imgData[j];g+=imgData[j+1];b+=imgData[j+2];}
+        calExtractedPads.push({id:PARAMETERS[i].id,name:PARAMETERS[i].name,rgb:[Math.round(r/25),Math.round(g/25),Math.round(b/25)]});
+    }
+    // Render extracted pads with expected value selectors
+    const grid=document.getElementById('calExtractedGrid');grid.innerHTML='';
+    calExtractedPads.forEach((pad,i)=>{
+        const param=PARAMETERS[i];
+        const opts=param.color_ref.map(r=>`<option value="${r[3]}">${r[3]}</option>`).join('');
+        const autoResult=findBestMatch(pad.rgb,param.color_ref);
+        const div=document.createElement('div');
+        div.style.cssText='display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface-1);border-radius:var(--radius-sm);';
+        div.innerHTML=`<div style="width:28px;height:28px;border-radius:50%;background:rgb(${pad.rgb.join(',')});border:2px solid rgba(255,255,255,0.15);flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;"><div style="font-size:0.68rem;font-weight:700;color:var(--text-muted);">${pad.id} — ${pad.name}</div><div style="font-size:0.6rem;color:var(--text-secondary);font-family:monospace;">RGB: ${pad.rgb.join(', ')} | Auto: ${autoResult.val}</div></div>
+            <select class="cal-expected" data-idx="${i}" style="width:80px;padding:5px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:4px;color:var(--text-primary);font-size:0.7rem;">${opts}</select>`;
+        // Pre-select auto-detected value
+        const sel=div.querySelector('select');
+        for(let o of sel.options){if(o.value===autoResult.val){o.selected=true;break;}}
+        grid.appendChild(div);
+    });
+    document.getElementById('calExtractedSection').style.display='block';document.getElementById('fabCalibration').classList.add('hidden');
+    document.getElementById('calStatusBadge').innerText="Extracted — Set Expected";document.getElementById('calStatusBadge').className="status-badge success";
+    showToast('✅','Pad colors extracted!');
+};
+
+// ---- CAL: Save Sample ----
+document.getElementById('calSaveSampleBtn').onclick=()=>{
+    if(!calExtractedPads.length)return;
+    const pads=calExtractedPads.map((pad,i)=>{
+        const sel=document.querySelector(`.cal-expected[data-idx="${i}"]`);
+        return{id:pad.id,name:pad.name,rgb:pad.rgb,expected:sel?sel.value:'Unknown'};
+    });
+    const sample={id:Date.now(),timestamp:new Date().toISOString(),pads};
+    calSavedSamples.push(sample);
+    localStorage.setItem('urivision_caldata',JSON.stringify(calSavedSamples));
+    showToast('💾',`Sample saved! (${calSavedSamples.length} total)`);
+    // Reset for next sample
+    calPoints=[];calExtractedPads=[];
+    document.getElementById('calHint').style.display='flex';document.getElementById('calExtractedSection').style.display='none';
+    document.getElementById('calStatusBadge').innerText="Saved ✓ — Add More";document.getElementById('calStatusBadge').className="status-badge success";
+    renderCal();
+};
+
+// ---- CAL: Saved Data Tab ----
+function renderCalSaved(){
+    const list=document.getElementById('calSavedList');
+    if(!calSavedSamples.length){list.innerHTML='<div class="empty-state"><span class="empty-icon">📋</span><p>No calibration data</p><p class="empty-sub">Go to Capture tab to add samples</p></div>';return;}
+    list.innerHTML='';
+    calSavedSamples.forEach((sample,idx)=>{
+        const d=new Date(sample.timestamp);
+        const card=document.createElement('div');
+        card.style.cssText='background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:10px;overflow:hidden;';
+        // Header
+        const header=document.createElement('div');
+        header.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;';
+        header.innerHTML=`<div><div style="font-size:0.8rem;font-weight:700;">Sample #${idx+1}</div><div style="font-size:0.68rem;color:var(--text-muted);">${d.toLocaleDateString()} ${d.toLocaleTimeString()}</div></div>
+            <div style="display:flex;gap:6px;align-items:center;"><span style="font-size:0.65rem;color:var(--text-secondary);">${sample.pads.length} pads</span><button class="cal-delete-btn" data-idx="${idx}" style="background:none;border:none;color:var(--accent-red);cursor:pointer;font-size:0.8rem;padding:2px 6px;">✕</button></div>`;
+        // Detail (expandable)
+        const detail=document.createElement('div');
+        detail.style.cssText='display:none;padding:0 14px 12px;border-top:1px solid var(--border-subtle);';
+        let padsHtml='';
+        sample.pads.forEach(pad=>{
+            padsHtml+=`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border-subtle);">
+                <div style="width:20px;height:20px;border-radius:50%;background:rgb(${pad.rgb.join(',')});border:1px solid rgba(255,255,255,0.15);flex-shrink:0;"></div>
+                <span style="font-size:0.68rem;font-weight:600;width:35px;flex-shrink:0;">${pad.id}</span>
+                <span style="font-size:0.65rem;color:var(--text-secondary);flex:1;font-family:monospace;">${pad.rgb.join(',')}</span>
+                <span style="font-size:0.7rem;font-weight:700;color:var(--accent-cyan);">${pad.expected}</span></div>`;
+        });
+        detail.innerHTML=padsHtml;
+        header.onclick=(e)=>{if(e.target.classList.contains('cal-delete-btn'))return;detail.style.display=detail.style.display==='none'?'block':'none';};
+        card.appendChild(header);card.appendChild(detail);list.appendChild(card);
+    });
+    // Delete handlers
+    list.querySelectorAll('.cal-delete-btn').forEach(btn=>{btn.onclick=(e)=>{e.stopPropagation();const idx=parseInt(btn.dataset.idx);calSavedSamples.splice(idx,1);localStorage.setItem('urivision_caldata',JSON.stringify(calSavedSamples));renderCalSaved();showToast('🗑️','Sample deleted');};});
+}
+
+// ---- CAL: Train Tab ----
+function populateTrainSelect(){
+    const sel=document.getElementById('trainSingleSelect');sel.innerHTML=PARAMETERS.map(p=>`<option value="${p.id}">${p.id}</option>`).join('');
+    document.getElementById('trainSampleCount').textContent=`${calSavedSamples.length} samples available`;
+}
+
+// Train ALL pads
+document.getElementById('trainAllBtn').onclick=()=>{
+    if(!calSavedSamples.length){showToast('⚠️','No samples');return;}
+    const newF={};
+    PARAMETERS.forEach(param=>{let tR=0,tG=0,tB=0,cnt=0;
+        calSavedSamples.forEach(sample=>{const pad=sample.pads.find(p=>p.id===param.id);if(!pad)return;
+            const ref=param.color_ref.find(r=>r[3]===pad.expected);if(!ref)return;
+            tR+=ref[0]-pad.rgb[0];tG+=ref[1]-pad.rgb[1];tB+=ref[2]-pad.rgb[2];cnt++;});
+        if(cnt>0)newF[param.id]=[Math.round(tR/cnt),Math.round(tG/cnt),Math.round(tB/cnt)];
+    });
+    calFactors={...calFactors,...newF};localStorage.setItem('urivision_cal',JSON.stringify(calFactors));
+    renderCalFactors();showToast('🧠',`Trained from ${calSavedSamples.length} samples!`);
+};
+
+// Train single pad
+document.getElementById('trainSingleBtn').onclick=()=>{
+    const paramId=document.getElementById('trainSingleSelect').value;
+    const param=PARAMETERS.find(p=>p.id===paramId);if(!param){showToast('⚠️','Select pad');return;}
+    let tR=0,tG=0,tB=0,cnt=0;
+    calSavedSamples.forEach(sample=>{const pad=sample.pads.find(p=>p.id===paramId);if(!pad)return;
+        const ref=param.color_ref.find(r=>r[3]===pad.expected);if(!ref)return;
+        tR+=ref[0]-pad.rgb[0];tG+=ref[1]-pad.rgb[1];tB+=ref[2]-pad.rgb[2];cnt++;});
+    if(cnt>0){calFactors[paramId]=[Math.round(tR/cnt),Math.round(tG/cnt),Math.round(tB/cnt)];localStorage.setItem('urivision_cal',JSON.stringify(calFactors));renderCalFactors();showToast('🎯',`${paramId} calibrated from ${cnt} samples!`);}
+    else showToast('⚠️','No data for this pad');
+};
+
+// Manual factors
+function renderManualGrid(){const grid=document.getElementById('calManualGrid');grid.innerHTML='';
+    PARAMETERS.forEach(param=>{const cf=calFactors[param.id]||[0,0,0];const row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:5px;padding:5px 0;border-bottom:1px solid var(--border-subtle);';
+        row.innerHTML=`<span style="font-size:0.7rem;font-weight:700;width:36px;color:var(--text-muted);">${param.id}</span>
+            <label style="font-size:0.58rem;color:#ef4444;">R</label><input type="number" class="cal-m-r" data-id="${param.id}" value="${cf[0]}" style="width:42px;padding:3px;background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:3px;color:var(--text-primary);font-size:0.68rem;text-align:center;">
+            <label style="font-size:0.58rem;color:#22c55e;">G</label><input type="number" class="cal-m-g" data-id="${param.id}" value="${cf[1]}" style="width:42px;padding:3px;background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:3px;color:var(--text-primary);font-size:0.68rem;text-align:center;">
+            <label style="font-size:0.58rem;color:#38bdf8;">B</label><input type="number" class="cal-m-b" data-id="${param.id}" value="${cf[2]}" style="width:42px;padding:3px;background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:3px;color:var(--text-primary);font-size:0.68rem;text-align:center;">`;
+        grid.appendChild(row);});}
+document.getElementById('calManualSaveBtn').onclick=()=>{PARAMETERS.forEach(p=>{calFactors[p.id]=[parseInt(document.querySelector(`.cal-m-r[data-id="${p.id}"]`).value)||0,parseInt(document.querySelector(`.cal-m-g[data-id="${p.id}"]`).value)||0,parseInt(document.querySelector(`.cal-m-b[data-id="${p.id}"]`).value)||0];});localStorage.setItem('urivision_cal',JSON.stringify(calFactors));renderCalFactors();showToast('💾','Manual factors saved!');};
+
+// Factors display
+function renderCalFactors(){const el=document.getElementById('calFactorsDisplay');
+    const keys=Object.keys(calFactors).filter(k=>calFactors[k]&&(calFactors[k][0]||calFactors[k][1]||calFactors[k][2]));
+    if(!keys.length){el.textContent='No calibration — using defaults.';return;}
+    el.innerHTML=keys.map(k=>`<div style="display:flex;gap:6px;padding:1px 0;"><strong>${k}:</strong><span style="color:#ef4444">R${calFactors[k][0]>0?'+':''}${calFactors[k][0]}</span><span style="color:#22c55e">G${calFactors[k][1]>0?'+':''}${calFactors[k][1]}</span><span style="color:#38bdf8">B${calFactors[k][2]>0?'+':''}${calFactors[k][2]}</span></div>`).join('');
+}
+document.getElementById('calResetAllBtn').onclick=()=>{if(confirm('Reset all calibration?')){calFactors={};localStorage.removeItem('urivision_cal');renderCalFactors();renderManualGrid();showToast('🗑️','Reset');}};
+renderCalFactors();
+
+// ======== TOAST ========
+function showToast(icon,msg){const t=document.getElementById('toast');document.getElementById('toastIcon').textContent=icon;document.getElementById('toastMessage').textContent=msg;t.classList.remove('hidden');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.add('hidden'),3000);}
+function updateOnline(){document.getElementById('connectionStatus').style.background=navigator.onLine?'#22c55e':'#ef4444';}
+window.addEventListener('online',updateOnline);window.addEventListener('offline',updateOnline);updateOnline();
+
+// ======== INSTALL GUIDE (shown on mobile if not installed yet) ========
+(function(){
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    const dismissed = localStorage.getItem('urivision_install_dismissed');
+    if(!isStandalone && !dismissed && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        document.getElementById('installGuide').style.display='block';
+    }
+    document.getElementById('hideInstallGuide').onclick = () => {
+        document.getElementById('installGuide').style.display='none';
+        localStorage.setItem('urivision_install_dismissed','1');
+    };
+})();
+</script>
+</body>
+</html>
